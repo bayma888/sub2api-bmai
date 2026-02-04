@@ -1,42 +1,45 @@
 # Sub2API 开发进度日志
 
+## 📅 2026-02-04 工作总结
+
+### ✅ 已完成
+
+#### F1: API Key 独立配额和过期时间
+- **状态**: ✅ 已完成并合并到上游
+- **PR**: [#471](https://github.com/Wei-Shaw/sub2api/pull/471) - Merged
+- **Branch**: `feature/api-key-quota-expiration`
+
+**功能说明**:
+- `quota`: 配额限制（USD），0 表示无限制
+- `quota_used`: 已使用额度（USD）
+- `expires_at`: 过期时间，null 表示永不过期
+
+**后端改动**:
+- 数据库迁移: `045_add_api_key_quota.sql`
+- Ent Schema: `api_key.go` 添加 quota/quota_used/expires_at 字段
+- 认证缓存: `APIKeyAuthSnapshot` 添加 Quota/QuotaUsed 字段
+- 扣费逻辑: `gateway_service.go` 中 RecordUsage 支持 API Key 配额扣费
+- Repository: `IncrementQuotaUsed` 原子更新配额
+
+**前端改动**:
+- `KeysView.vue`: 创建/编辑 API Key 时支持配额和过期时间设置
+- DTO 更新: 添加 quota/quota_used/expires_at 字段
+
+**CI 修复**:
+- 修复测试 stub 缺少 `IncrementQuotaUsed` 方法
+- 修复 gofmt 格式化问题
+- 更新 API contract 测试期望值
+
+---
+
 ## 📅 2026-02-03 工作总结
 
 ### ✅ 已完成
 
 #### F2: 管理员查看用户余额/并发变动记录
-- **状态**: ✅ 已完成，待审核合并
+- **状态**: ✅ 已完成并合并
 - **Branch**: `feature/admin-user-balance-history`
-- **Commit**: `606e29d`
 - **改动文件**: 12个，588行新增
-
-**后端改动**:
-- `backend/internal/service/redeem_service.go`: 新增 `SumPositiveBalanceByUser` 接口
-- `backend/internal/repository/redeem_code_repo.go`: 实现SQL聚合查询用户累计充值金额
-- `backend/internal/service/admin_service.go`: GetUserBalanceHistory返回totalRecharged
-- `backend/internal/handler/admin/user_handler.go`: 新API响应字段total_recharged
-- `backend/internal/server/routes/admin.go`: 注册GET /admin/users/:id/balance-history路由
-
-**前端改动**:
-- `frontend/src/components/admin/user/UserBalanceHistoryModal.vue`: 新建变动记录弹框组件
-  - 两行header设计（用户信息、余额、创建时间、备注、总充值）
-  - 类型筛选dropdown（全部/余额/并发/订阅）
-  - 快捷充值/退款按钮（样式与菜单保持一致）
-  - 分页历史列表（带图标和彩色显示）
-- `frontend/src/views/admin/UsersView.vue`:
-  - 余额列添加点击打开记录功能
-  - 添加即时tooltip提示"点击打开充值记录"
-  - 余额列添加快捷充值按钮
-  - 菜单"充值记录"图标改为dollar（金钱）
-- `frontend/src/components/common/BaseDialog.vue`: 新增zIndex属性支持弹框层级控制
-- `frontend/src/api/admin/users.ts`: 新增BalanceHistoryResponse接口，包含total_recharged
-- i18n更新: 中英文添加balanceHistoryTip翻译
-
-**UI优化**:
-- 弹框宽度设为"wide"，显示更舒适
-- 点击弹框外自动关闭（closeOnClickOutside=true）
-- 余额tooltip采用CSS即时显示（duration-75）
-- 充值/退款弹框z-index=50，变动记录弹框z-index=40，确保充值弹框在上面
 
 **API设计**:
 ```
@@ -61,96 +64,62 @@ Response:
 #### F3: 用户搜索支持备注字段
 - **状态**: ✅ 已完成并合并
 - **PR**: [#449](https://github.com/Wei-Shaw/sub2api/pull/449) - Merged
-- **改动**:
-  - 文件: `backend/internal/repository/user_repo.go`
-  - 添加: `dbuser.NotesContainsFold(filters.Search)` 到搜索条件
-  - 效果: 管理员可以通过用户备注搜索用户
 
 #### F4: 用户端显示管理员调整备注
 - **状态**: ✅ 已完成并合并
 - **PR**: [#450](https://github.com/Wei-Shaw/sub2api/pull/450) - Merged
-- **改动**:
-  - `backend/internal/handler/dto/types.go`: 为RedeemCode添加notes字段
-  - `backend/internal/handler/dto/mappers.go`: 条件性填充notes（仅admin_balance/admin_concurrency）
-  - `frontend/src/api/redeem.ts`: 添加notes到TypeScript接口
-  - `frontend/src/views/user/RedeemView.vue`: 在历史记录中显示备注
-  - 效果: 用户可以看到管理员调整余额的原因
-
-### 🔄 进行中
-
-#### F2: 管理员查看用户余额记录
-- **状态**: ✅ 已完成开发，等待PR审核
-
-### ⏳ 计划中
-
-#### F1: API Key独立配额
-- **状态**: ⏳ 待开发
-- **复杂度**: 中等
-- **影响**: 数据库Schema、Service层、Handler层、前端表单
 
 ---
 
-## 🔧 技术调整
+## 🎯 功能完成状态
 
-### 热更新开发环境
-- **问题**: 每次前端改动都需要Docker重新构建，效率低下
-- **解决**:
-  - 设置Vite dev server at localhost:3000
-  - 配置API代理指向Docker backend (localhost:8080)
-  - 前端改动自动HMR (Hot Module Replacement)
-  - `pnpm install && pnpm dev` 启动开发服务器
-  - 显著提升开发效率：改动后<1秒自动更新
-
-### Git配置修复
-- **问题**: 之前的PR使用`xiaobei@example.com`邮箱，无法关联GitHub账号头像
-- **解决**:
-  - 更新git全局邮箱: `kubai666@126.com`
-  - 更新git全局用户名: `bayma888`
-  - 已应用于新分支，以后的PR会正确显示头像
+| 功能 | 状态 | PR |
+|------|------|-----|
+| F1 - API Key 独立配额 | ✅ 已合并 | #471 |
+| F2 - 用户余额记录 | ✅ 已合并 | - |
+| F3 - 搜索备注支持 | ✅ 已合并 | #449 |
+| F4 - 用户端显示备注 | ✅ 已合并 | #450 |
 
 ---
 
-## 📚 文档更新
+## 🔧 项目信息
 
-- ✅ `DAILY_PROGRESS.md`: 添加2026-02-03工作总结
-- ✅ `LOCAL_DEV_GUIDE.md`: Vite热更新开发指南
+### 仓库结构
+- **上游仓库**: `Wei-Shaw/sub2api`
+- **Fork 仓库**: `bayma888/sub2api-bmai`
+- **本地文档分支**: `local/dev-docs` (不提交到上游)
 
----
+### 技术栈
+- **后端**: Go 1.25.6 + Ent ORM + PostgreSQL + Redis
+- **前端**: Vue 3 + TypeScript + TailwindCSS + Vite
+- **端口**: 前端 3000, 后端 8080
 
-## 🎯 下一步计划
-
-1. **F2 PR审核** (优先级: 高)
-   - [ ] 创建PR并等待审核
-   - [ ] 根据feedback进行调整
-   - [ ] 合并到main分支
-
-2. **F1规划** (优先级: 中)
-   - [ ] 数据库Schema设计
-   - [ ] 配额检查逻辑
-   - [ ] 前端配额管理界面
-
----
-
-## 📝 技术要点
-
-### F2功能架构
-- **分层设计**: Repository → Service → Handler → API
-- **数据一致性**: 使用Ent ORM确保数据完整性
-- **性能优化**: 使用SQL聚合而不是内存遍历计算总充值
-- **UI/UX**: 即时tooltip + 快捷操作 + 合理弹框层级
-
-### 前端最佳实践
-- **组件复用**: 充值/退款逻辑由UsersView管理，BalanceHistoryModal仅发送事件
-- **样式一致性**: 按钮样式与菜单保持统一
-- **可访问性**: 使用BaseDialog的焦点管理和Esc关闭
-- **i18n**: 中英文支持完整
+### Git 配置
+- **用户名**: bayma888
+- **邮箱**: kubai666@126.com
 
 ### 开发工作流
-- 使用Vite HMR进行快速迭代
-- 关键改动后使用Docker镜像验证完整功能
-- 分支命名规范: feature/xxxxx
-- Commit信息详细，便于追踪
+```bash
+# 热更新开发
+cd frontend && pnpm install && pnpm dev
+
+# 同步上游代码
+git checkout main
+git pull upstream main
+git push origin main
+
+# 恢复本地文档
+git checkout local/dev-docs
+```
 
 ---
 
-**最后更新**: 2026-02-03 15:00 UTC+8
+## 📝 Claude Code 偏好设置
+
+- **语言**: 回复使用中文
+- **Git 提交**: 使用中文
+- **称呼**: Master
+
+---
+
+**最后更新**: 2026-02-04
