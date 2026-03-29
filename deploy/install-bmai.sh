@@ -557,10 +557,9 @@ get_current_version() {
 
 # Download and extract
 download_and_extract() {
-    # 兼容 bmai-v0.1.0 和 v0.1.0 两种 tag 格式
-    local version_num=${LATEST_VERSION#bmai-v}
-    version_num=${version_num#v}
-    local archive_name="sub2api_${version_num}_${OS}_${ARCH}.tar.gz"
+    # GoReleaser 的 {{ .Version }} 就是 tag 原值，文件名格式:
+    # sub2api_bmai-v0.1.105.1_linux_amd64.tar.gz
+    local archive_name="sub2api_${LATEST_VERSION}_${OS}_${ARCH}.tar.gz"
     local download_url="https://github.com/${GITHUB_REPO}/releases/download/${LATEST_VERSION}/${archive_name}"
     local checksum_url="https://github.com/${GITHUB_REPO}/releases/download/${LATEST_VERSION}/checksums.txt"
 
