@@ -1,0 +1,63 @@
+# BMAI 专属 GoReleaser 配置
+# 只编译 linux-amd64 二进制 + tar.gz，不搞 Docker
+# tag 格式: bmai-v0.1.0 → Release 名: bmai-v0.1.0
+version: 2
+
+project_name: sub2api
+
+before:
+  hooks:
+    - go mod tidy -C backend
+
+builds:
+  - id: sub2api
+    dir: backend
+    main: ./cmd/server
+    binary: sub2api
+    flags:
+      - -tags=embed
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - -s -w
+      - -X main.Commit={{.Commit}}
+      - -X main.Date={{.Date}}
+      - -X main.BuildType=release
+
+archives:
+  - id: default
+    format: tar.gz
+    # 产出: sub2api_0.1.0_linux_amd64.tar.gz（和 install-bmai.sh 匹配）
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - LICENSE*
+      - README*
+      - deploy/*
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+changelog:
+  disable: true
+
+release:
+  draft: false
+  prerelease: auto
+  name_template: "BMAI Sub2API {{.Version}}"
+  header: |
+    > BMAI Sub2API - 私有 Fork 版本（含排行榜等自定义功能）
+
+  footer: |
+    ---
+
+    ## 📥 一键安装 / 升级
+
+    ```bash
+    curl -sSL https://raw.githubusercontent.com/bayma888/sub2api-bmai/bmai-sub2api-my-production20260329/deploy/install-bmai.sh | sudo bash
+    ```
