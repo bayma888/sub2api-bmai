@@ -515,9 +515,11 @@ validate_version() {
         exit 1
     fi
 
-    # Ensure version starts with 'v'
-    if [[ ! "$version" =~ ^v ]]; then
-        version="v$version"
+    # Ensure version starts with 'bmai-v' (BMAI fork tag format)
+    if [[ "$version" =~ ^[0-9] ]]; then
+        version="bmai-v$version"
+    elif [[ "$version" =~ ^v[0-9] ]]; then
+        version="bmai-$version"
     fi
 
     print_info "$(msg 'validating_version') $version" >&2
@@ -555,7 +557,9 @@ get_current_version() {
 
 # Download and extract
 download_and_extract() {
-    local version_num=${LATEST_VERSION#v}
+    # 兼容 bmai-v0.1.0 和 v0.1.0 两种 tag 格式
+    local version_num=${LATEST_VERSION#bmai-v}
+    version_num=${version_num#v}
     local archive_name="sub2api_${version_num}_${OS}_${ARCH}.tar.gz"
     local download_url="https://github.com/${GITHUB_REPO}/releases/download/${LATEST_VERSION}/${archive_name}"
     local checksum_url="https://github.com/${GITHUB_REPO}/releases/download/${LATEST_VERSION}/checksums.txt"
