@@ -405,6 +405,12 @@ func (s *stubUsageLogRepo) GetModelStatsAggregated(ctx context.Context, modelNam
 func (s *stubUsageLogRepo) GetDailyStatsAggregated(ctx context.Context, userID int64, startTime, endTime time.Time) ([]map[string]any, error) {
 	return nil, nil
 }
+func (s *stubUsageLogRepo) GetLeaderboard(ctx context.Context, lbType usagestats.LeaderboardType, startTime, endTime time.Time, limit int) ([]usagestats.LeaderboardEntry, error) {
+	return nil, nil
+}
+func (s *stubUsageLogRepo) GetUserLeaderboardRank(ctx context.Context, userID int64, lbType usagestats.LeaderboardType, startTime, endTime time.Time) (*usagestats.LeaderboardMyRank, error) {
+	return nil, nil
+}
 
 func TestSoraGatewayHandler_ChatCompletions(t *testing.T) {
 	gin.SetMode(gin.TestMode)

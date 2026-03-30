@@ -359,3 +359,70 @@ func (s *UsageService) GetStatsWithFilters(ctx context.Context, filters usagesta
 	}
 	return stats, nil
 }
+
+// leaderboardTitles maps leaderboard type to the top-1 title/badge.
+var leaderboardTitles = map[usagestats.LeaderboardType]string{
+	usagestats.LeaderboardTypeCost:       "\U0001f451 消费之王",
+	usagestats.LeaderboardTypeRecharge:   "\U0001f48e 钻石大佬",
+	usagestats.LeaderboardTypeTokens:     "\U0001f525 Token 巨鲸",
+	usagestats.LeaderboardTypeRequests:   "\u26a1 请求狂魔",
+	usagestats.LeaderboardTypeActiveDays: "\U0001f4aa 勤劳之星",
+}
+
+// GetLeaderboard returns the leaderboard for the given type and time period.
+func (s *UsageService) GetLeaderboard(ctx context.Context, lbType usagestats.LeaderboardType, period usagestats.LeaderboardPeriod, userID int64, limit int) (*usagestats.LeaderboardResponse, error) {
+	startTime, endTime := leaderboardPeriodToTimeRange(period)
+
+	items, err := s.usageRepo.GetLeaderboard(ctx, lbType, startTime, endTime, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get leaderboard: %w", err)
+	}
+
+	// Assign titles
+	topTitle := leaderboardTitles[lbType]
+	for i := range items {
+		switch items[i].Rank {
+		case 1:
+			items[i].Title = topTitle
+		case 2, 3:
+			items[i].Title = "\U0001f3c6 榜上有名"
+		}
+	}
+
+	resp := &usagestats.LeaderboardResponse{
+		Type:   lbType,
+		Period: period,
+		Items:  items,
+	}
+
+	// Get current user's rank
+	myRank, err := s.usageRepo.GetUserLeaderboardRank(ctx, userID, lbType, startTime, endTime)
+	if err != nil {
+		// Non-fatal: log and continue without my_rank
+		fmt.Printf("warn: failed to get user %d leaderboard rank: %v\n", userID, err)
+	}
+	resp.MyRank = myRank
+
+	return resp, nil
+}
+
+// leaderboardPeriodToTimeRange converts a period string to start/end times.
+func leaderboardPeriodToTimeRange(period usagestats.LeaderboardPeriod) (time.Time, time.Time) {
+	now := time.Now()
+	switch period {
+	case usagestats.LeaderboardPeriodToday:
+		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		return start, now
+	case usagestats.LeaderboardPeriodWeek:
+		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -6)
+		return start, now
+	case usagestats.LeaderboardPeriodMonth:
+		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, -1, 0)
+		return start, now
+	case usagestats.LeaderboardPeriodAll:
+		return time.Time{}, time.Time{} // zero times = no filter
+	default:
+		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		return start, now
+	}
+}

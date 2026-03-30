@@ -411,3 +411,43 @@ func (h *UsageHandler) DashboardAPIKeysUsage(c *gin.Context) {
 
 	response.Success(c, gin.H{"stats": stats})
 }
+
+// Leaderboard returns the gamified leaderboard for the given type and time period.
+// GET /api/v1/usage/leaderboard?type=cost&period=today&limit=20
+func (h *UsageHandler) Leaderboard(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+
+	lbType := usagestats.LeaderboardType(c.DefaultQuery("type", "cost"))
+	if !lbType.IsValid() {
+		response.BadRequest(c, "Invalid leaderboard type. Allowed: cost, recharge, tokens, requests, active_days")
+		return
+	}
+
+	period := usagestats.LeaderboardPeriod(c.DefaultQuery("period", "today"))
+	if !period.IsValid() {
+		response.BadRequest(c, "Invalid period. Allowed: today, week, month, all")
+		return
+	}
+
+	limit := 20
+	if limitStr := c.Query("limit"); limitStr != "" {
+		parsed, err := strconv.Atoi(limitStr)
+		if err != nil || parsed < 1 || parsed > 100 {
+			response.BadRequest(c, "Invalid limit (1-100)")
+			return
+		}
+		limit = parsed
+	}
+
+	result, err := h.usageService.GetLeaderboard(c.Request.Context(), lbType, period, subject.UserID, limit)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	response.Success(c, result)
+}

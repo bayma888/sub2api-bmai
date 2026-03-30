@@ -352,7 +352,8 @@ export default {
     mySubscriptions: '我的订阅',
     buySubscription: '充值/订阅',
     docs: '文档',
-    sora: 'Sora 创作'
+    sora: 'Sora 创作',
+    leaderboard: '排行榜'
   },
 
   // Auth
@@ -775,6 +776,35 @@ export default {
     exportExcelFailed: '使用数据导出失败',
     imageUnit: '张',
     userAgent: 'User-Agent'
+  },
+
+  // Leaderboard
+  leaderboard: {
+    title: '排行榜',
+    description: '看看谁是消费之王',
+    typeCost: '消费榜',
+    typeRecharge: '充值榜',
+    typeTokens: 'Token榜',
+    typeRequests: '请求榜',
+    typeActiveDays: '勤劳榜',
+    periodToday: '今日',
+    periodWeek: '本周',
+    periodMonth: '本月',
+    periodAll: '全部',
+    myRank: '我的排名',
+    notRanked: '暂未上榜，加油！',
+    gap: '再{action} {amount} 即可超越 #{rank}',
+    gapCost: '消费',
+    gapRecharge: '充值',
+    gapTokens: '使用',
+    gapRequests: '请求',
+    gapActiveDays: '活跃',
+    totalParticipants: '共 {count} 人参与',
+    noData: '暂无数据',
+    loading: '加载中...',
+    rank: '排名',
+    value: '数值',
+    surpass: '超越'
   },
 
   // Redeem
