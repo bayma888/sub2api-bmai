@@ -257,6 +257,54 @@ export async function getDashboardApiKeysUsage(
   return data
 }
 
+// ==================== Leaderboard Types ====================
+
+export type LeaderboardType = 'cost' | 'recharge' | 'tokens' | 'requests' | 'active_days'
+export type LeaderboardPeriod = 'today' | 'week' | 'month' | 'all'
+
+export interface LeaderboardEntry {
+  rank: number
+  user_id: number
+  masked_email: string
+  value: number
+  requests: number
+  tokens: number
+  title?: string
+}
+
+export interface LeaderboardMyRank {
+  rank: number
+  value: number
+  requests: number
+  tokens: number
+  next_rank_gap?: number
+  next_rank_email?: string
+}
+
+export interface LeaderboardResponse {
+  type: LeaderboardType
+  period: LeaderboardPeriod
+  items: LeaderboardEntry[]
+  my_rank?: LeaderboardMyRank
+}
+
+/**
+ * Get leaderboard data
+ * @param type - Leaderboard type
+ * @param period - Time period
+ * @param limit - Max entries (default 20)
+ */
+export async function getLeaderboard(
+  type: LeaderboardType = 'cost',
+  period: LeaderboardPeriod = 'today',
+  limit: number = 20
+): Promise<LeaderboardResponse> {
+  const { data } = await apiClient.get<LeaderboardResponse>('/usage/leaderboard', {
+    params: { type, period, limit }
+  })
+  return data
+}
+
 export const usageAPI = {
   list,
   query,
@@ -268,7 +316,9 @@ export const usageAPI = {
   getDashboardStats,
   getDashboardTrend,
   getDashboardModels,
-  getDashboardApiKeysUsage
+  getDashboardApiKeysUsage,
+  // Leaderboard
+  getLeaderboard
 }
 
 export default usageAPI

@@ -2277,6 +2277,379 @@ func (r *usageLogRepository) GetUserSpendingRanking(ctx context.Context, startTi
 	}, nil
 }
 
+// GetLeaderboard returns the top N users for a given leaderboard type and time range.
+// For type "recharge", it queries the redeem_codes table instead of usage_logs.
+func (r *usageLogRepository) GetLeaderboard(ctx context.Context, lbType usagestats.LeaderboardType, startTime, endTime time.Time, limit int) ([]usagestats.LeaderboardEntry, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+
+	var query string
+	var args []any
+	useTimeFilter := !startTime.IsZero() && !endTime.IsZero()
+
+	switch lbType {
+	case usagestats.LeaderboardTypeCost:
+		if useTimeFilter {
+			query = `
+				SELECT
+					ROW_NUMBER() OVER (ORDER BY COALESCE(SUM(u.actual_cost), 0) DESC, u.user_id ASC) as rank,
+					u.user_id,
+					COALESCE(us.email, '') as email,
+					COALESCE(SUM(u.actual_cost), 0) as value,
+					COUNT(*) as requests,
+					COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) as tokens
+				FROM usage_logs u
+				LEFT JOIN users us ON u.user_id = us.id
+				WHERE u.created_at >= $1 AND u.created_at < $2
+				GROUP BY u.user_id, us.email
+				ORDER BY value DESC, u.user_id ASC
+				LIMIT $3`
+			args = []any{startTime, endTime, limit}
+		} else {
+			query = `
+				SELECT
+					ROW_NUMBER() OVER (ORDER BY COALESCE(SUM(u.actual_cost), 0) DESC, u.user_id ASC) as rank,
+					u.user_id,
+					COALESCE(us.email, '') as email,
+					COALESCE(SUM(u.actual_cost), 0) as value,
+					COUNT(*) as requests,
+					COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) as tokens
+				FROM usage_logs u
+				LEFT JOIN users us ON u.user_id = us.id
+				GROUP BY u.user_id, us.email
+				ORDER BY value DESC, u.user_id ASC
+				LIMIT $1`
+			args = []any{limit}
+		}
+
+	case usagestats.LeaderboardTypeTokens:
+		if useTimeFilter {
+			query = `
+				SELECT
+					ROW_NUMBER() OVER (ORDER BY COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) DESC, u.user_id ASC) as rank,
+					u.user_id,
+					COALESCE(us.email, '') as email,
+					COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) as value,
+					COUNT(*) as requests,
+					COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) as tokens
+				FROM usage_logs u
+				LEFT JOIN users us ON u.user_id = us.id
+				WHERE u.created_at >= $1 AND u.created_at < $2
+				GROUP BY u.user_id, us.email
+				ORDER BY value DESC, u.user_id ASC
+				LIMIT $3`
+			args = []any{startTime, endTime, limit}
+		} else {
+			query = `
+				SELECT
+					ROW_NUMBER() OVER (ORDER BY COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) DESC, u.user_id ASC) as rank,
+					u.user_id,
+					COALESCE(us.email, '') as email,
+					COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) as value,
+					COUNT(*) as requests,
+					COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) as tokens
+				FROM usage_logs u
+				LEFT JOIN users us ON u.user_id = us.id
+				GROUP BY u.user_id, us.email
+				ORDER BY value DESC, u.user_id ASC
+				LIMIT $1`
+			args = []any{limit}
+		}
+
+	case usagestats.LeaderboardTypeRequests:
+		if useTimeFilter {
+			query = `
+				SELECT
+					ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC, u.user_id ASC) as rank,
+					u.user_id,
+					COALESCE(us.email, '') as email,
+					COUNT(*)::float8 as value,
+					COUNT(*) as requests,
+					COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) as tokens
+				FROM usage_logs u
+				LEFT JOIN users us ON u.user_id = us.id
+				WHERE u.created_at >= $1 AND u.created_at < $2
+				GROUP BY u.user_id, us.email
+				ORDER BY value DESC, u.user_id ASC
+				LIMIT $3`
+			args = []any{startTime, endTime, limit}
+		} else {
+			query = `
+				SELECT
+					ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC, u.user_id ASC) as rank,
+					u.user_id,
+					COALESCE(us.email, '') as email,
+					COUNT(*)::float8 as value,
+					COUNT(*) as requests,
+					COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) as tokens
+				FROM usage_logs u
+				LEFT JOIN users us ON u.user_id = us.id
+				GROUP BY u.user_id, us.email
+				ORDER BY value DESC, u.user_id ASC
+				LIMIT $1`
+			args = []any{limit}
+		}
+
+	case usagestats.LeaderboardTypeActiveDays:
+		if useTimeFilter {
+			query = `
+				SELECT
+					ROW_NUMBER() OVER (ORDER BY COUNT(DISTINCT DATE(u.created_at)) DESC, u.user_id ASC) as rank,
+					u.user_id,
+					COALESCE(us.email, '') as email,
+					COUNT(DISTINCT DATE(u.created_at))::float8 as value,
+					COUNT(*) as requests,
+					COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) as tokens
+				FROM usage_logs u
+				LEFT JOIN users us ON u.user_id = us.id
+				WHERE u.created_at >= $1 AND u.created_at < $2
+				GROUP BY u.user_id, us.email
+				ORDER BY value DESC, u.user_id ASC
+				LIMIT $3`
+			args = []any{startTime, endTime, limit}
+		} else {
+			query = `
+				SELECT
+					ROW_NUMBER() OVER (ORDER BY COUNT(DISTINCT DATE(u.created_at)) DESC, u.user_id ASC) as rank,
+					u.user_id,
+					COALESCE(us.email, '') as email,
+					COUNT(DISTINCT DATE(u.created_at))::float8 as value,
+					COUNT(*) as requests,
+					COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) as tokens
+				FROM usage_logs u
+				LEFT JOIN users us ON u.user_id = us.id
+				GROUP BY u.user_id, us.email
+				ORDER BY value DESC, u.user_id ASC
+				LIMIT $1`
+			args = []any{limit}
+		}
+
+	case usagestats.LeaderboardTypeRecharge:
+		if useTimeFilter {
+			query = `
+				SELECT
+					ROW_NUMBER() OVER (ORDER BY COALESCE(SUM(r.value), 0) DESC, r.used_by ASC) as rank,
+					r.used_by as user_id,
+					COALESCE(us.email, '') as email,
+					COALESCE(SUM(r.value), 0) as value,
+					0::int8 as requests,
+					0::int8 as tokens
+				FROM redeem_codes r
+				LEFT JOIN users us ON r.used_by = us.id
+				WHERE r.value > 0 AND r.type IN ('balance', 'admin_balance')
+					AND r.used_at >= $1 AND r.used_at < $2
+				GROUP BY r.used_by, us.email
+				ORDER BY value DESC, r.used_by ASC
+				LIMIT $3`
+			args = []any{startTime, endTime, limit}
+		} else {
+			query = `
+				SELECT
+					ROW_NUMBER() OVER (ORDER BY COALESCE(SUM(r.value), 0) DESC, r.used_by ASC) as rank,
+					r.used_by as user_id,
+					COALESCE(us.email, '') as email,
+					COALESCE(SUM(r.value), 0) as value,
+					0::int8 as requests,
+					0::int8 as tokens
+				FROM redeem_codes r
+				LEFT JOIN users us ON r.used_by = us.id
+				WHERE r.value > 0 AND r.type IN ('balance', 'admin_balance')
+				GROUP BY r.used_by, us.email
+				ORDER BY value DESC, r.used_by ASC
+				LIMIT $1`
+			args = []any{limit}
+		}
+
+	default:
+		return nil, fmt.Errorf("unsupported leaderboard type: %s", lbType)
+	}
+
+	rows, err := r.sql.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	entries := make([]usagestats.LeaderboardEntry, 0, limit)
+	for rows.Next() {
+		var e usagestats.LeaderboardEntry
+		var email string
+		if err := rows.Scan(&e.Rank, &e.UserID, &email, &e.Value, &e.Requests, &e.Tokens); err != nil {
+			return nil, err
+		}
+		e.MaskedEmail = maskEmail(email)
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
+}
+
+// GetUserLeaderboardRank returns the current user's rank for a given leaderboard type and time range.
+// It also computes the gap to the next higher rank for the "almost there" feature.
+func (r *usageLogRepository) GetUserLeaderboardRank(ctx context.Context, userID int64, lbType usagestats.LeaderboardType, startTime, endTime time.Time) (*usagestats.LeaderboardMyRank, error) {
+	var query string
+	var args []any
+	useTimeFilter := !startTime.IsZero() && !endTime.IsZero()
+
+	// Build a CTE that ranks ALL users, then pick the target user and its predecessor.
+	var valueSQLUsage, valueSQLRecharge string
+	switch lbType {
+	case usagestats.LeaderboardTypeCost:
+		valueSQLUsage = "COALESCE(SUM(u.actual_cost), 0)"
+	case usagestats.LeaderboardTypeTokens:
+		valueSQLUsage = "COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0)"
+	case usagestats.LeaderboardTypeRequests:
+		valueSQLUsage = "COUNT(*)::float8"
+	case usagestats.LeaderboardTypeActiveDays:
+		valueSQLUsage = "COUNT(DISTINCT DATE(u.created_at))::float8"
+	case usagestats.LeaderboardTypeRecharge:
+		valueSQLRecharge = "COALESCE(SUM(r.value), 0)"
+	default:
+		return nil, fmt.Errorf("unsupported leaderboard type: %s", lbType)
+	}
+
+	if lbType == usagestats.LeaderboardTypeRecharge {
+		if useTimeFilter {
+			query = fmt.Sprintf(`
+				WITH ranked AS (
+					SELECT
+						r.used_by as user_id,
+						COALESCE(us.email, '') as email,
+						%s as value,
+						ROW_NUMBER() OVER (ORDER BY %s DESC, r.used_by ASC) as rank
+					FROM redeem_codes r
+					LEFT JOIN users us ON r.used_by = us.id
+					WHERE r.value > 0 AND r.type IN ('balance', 'admin_balance')
+						AND r.used_at >= $1 AND r.used_at < $2
+					GROUP BY r.used_by, us.email
+				)
+				SELECT
+					cur.rank, cur.value, 0::int8 as requests, 0::int8 as tokens,
+					COALESCE(prev.value, 0) as prev_value,
+					COALESCE(prev.email, '') as prev_email
+				FROM ranked cur
+				LEFT JOIN ranked prev ON prev.rank = cur.rank - 1
+				WHERE cur.user_id = $3`,
+				valueSQLRecharge, valueSQLRecharge)
+			args = []any{startTime, endTime, userID}
+		} else {
+			query = fmt.Sprintf(`
+				WITH ranked AS (
+					SELECT
+						r.used_by as user_id,
+						COALESCE(us.email, '') as email,
+						%s as value,
+						ROW_NUMBER() OVER (ORDER BY %s DESC, r.used_by ASC) as rank
+					FROM redeem_codes r
+					LEFT JOIN users us ON r.used_by = us.id
+					WHERE r.value > 0 AND r.type IN ('balance', 'admin_balance')
+					GROUP BY r.used_by, us.email
+				)
+				SELECT
+					cur.rank, cur.value, 0::int8 as requests, 0::int8 as tokens,
+					COALESCE(prev.value, 0) as prev_value,
+					COALESCE(prev.email, '') as prev_email
+				FROM ranked cur
+				LEFT JOIN ranked prev ON prev.rank = cur.rank - 1
+				WHERE cur.user_id = $1`,
+				valueSQLRecharge, valueSQLRecharge)
+			args = []any{userID}
+		}
+	} else {
+		if useTimeFilter {
+			query = fmt.Sprintf(`
+				WITH ranked AS (
+					SELECT
+						u.user_id,
+						COALESCE(us.email, '') as email,
+						%s as value,
+						COUNT(*) as requests,
+						COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) as tokens,
+						ROW_NUMBER() OVER (ORDER BY %s DESC, u.user_id ASC) as rank
+					FROM usage_logs u
+					LEFT JOIN users us ON u.user_id = us.id
+					WHERE u.created_at >= $1 AND u.created_at < $2
+					GROUP BY u.user_id, us.email
+				)
+				SELECT
+					cur.rank, cur.value, cur.requests, cur.tokens,
+					COALESCE(prev.value, 0) as prev_value,
+					COALESCE(prev.email, '') as prev_email
+				FROM ranked cur
+				LEFT JOIN ranked prev ON prev.rank = cur.rank - 1
+				WHERE cur.user_id = $3`,
+				valueSQLUsage, valueSQLUsage)
+			args = []any{startTime, endTime, userID}
+		} else {
+			query = fmt.Sprintf(`
+				WITH ranked AS (
+					SELECT
+						u.user_id,
+						COALESCE(us.email, '') as email,
+						%s as value,
+						COUNT(*) as requests,
+						COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) as tokens,
+						ROW_NUMBER() OVER (ORDER BY %s DESC, u.user_id ASC) as rank
+					FROM usage_logs u
+					LEFT JOIN users us ON u.user_id = us.id
+					GROUP BY u.user_id, us.email
+				)
+				SELECT
+					cur.rank, cur.value, cur.requests, cur.tokens,
+					COALESCE(prev.value, 0) as prev_value,
+					COALESCE(prev.email, '') as prev_email
+				FROM ranked cur
+				LEFT JOIN ranked prev ON prev.rank = cur.rank - 1
+				WHERE cur.user_id = $1`,
+				valueSQLUsage, valueSQLUsage)
+			args = []any{userID}
+		}
+	}
+
+	var rank int
+	var value float64
+	var requests, tokens int64
+	var prevValue float64
+	var prevEmail string
+
+	err := r.db.QueryRowContext(ctx, query, args...).Scan(&rank, &value, &requests, &tokens, &prevValue, &prevEmail)
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			return nil, nil // user has no activity
+		}
+		return nil, err
+	}
+
+	result := &usagestats.LeaderboardMyRank{
+		Rank:     rank,
+		Value:    value,
+		Requests: requests,
+		Tokens:   tokens,
+	}
+	if rank > 1 && prevValue > 0 {
+		result.NextRankGap = prevValue - value
+		result.NextRankEmail = maskEmail(prevEmail)
+	}
+	return result, nil
+}
+
+// maskEmail masks an email for privacy: "xiaobei@gmail.com" → "xi**@gma..."
+func maskEmail(email string) string {
+	parts := strings.SplitN(email, "@", 2)
+	if len(parts) != 2 {
+		return "***"
+	}
+	name := parts[0]
+	domain := parts[1]
+	if len(name) > 2 {
+		name = name[:2] + "**"
+	}
+	if len(domain) > 3 {
+		domain = domain[:3] + "..."
+	}
+	return name + "@" + domain
+}
+
 // UserDashboardStats 用户仪表盘统计
 type UserDashboardStats = usagestats.UserDashboardStats
 

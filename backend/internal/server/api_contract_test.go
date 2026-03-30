@@ -1813,6 +1813,12 @@ func (r *stubUsageLogRepo) GetStatsWithFilters(ctx context.Context, filters usag
 func (r *stubUsageLogRepo) GetAllGroupUsageSummary(ctx context.Context, todayStart time.Time) ([]usagestats.GroupUsageSummary, error) {
 	return nil, errors.New("not implemented")
 }
+func (r *stubUsageLogRepo) GetLeaderboard(ctx context.Context, lbType usagestats.LeaderboardType, startTime, endTime time.Time, limit int) ([]usagestats.LeaderboardEntry, error) {
+	return nil, nil
+}
+func (r *stubUsageLogRepo) GetUserLeaderboardRank(ctx context.Context, userID int64, lbType usagestats.LeaderboardType, startTime, endTime time.Time) (*usagestats.LeaderboardMyRank, error) {
+	return nil, nil
+}
 
 type stubSettingRepo struct {
 	all map[string]string

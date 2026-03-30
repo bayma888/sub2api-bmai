@@ -322,3 +322,74 @@ type AccountUsageStatsResponse struct {
 	Endpoints         []EndpointStat        `json:"endpoints"`
 	UpstreamEndpoints []EndpointStat        `json:"upstream_endpoints"`
 }
+
+// LeaderboardType represents the type of leaderboard ranking.
+type LeaderboardType string
+
+const (
+	LeaderboardTypeCost       LeaderboardType = "cost"
+	LeaderboardTypeRecharge   LeaderboardType = "recharge"
+	LeaderboardTypeTokens     LeaderboardType = "tokens"
+	LeaderboardTypeRequests   LeaderboardType = "requests"
+	LeaderboardTypeActiveDays LeaderboardType = "active_days"
+)
+
+// IsValid checks whether the leaderboard type is valid.
+func (t LeaderboardType) IsValid() bool {
+	switch t {
+	case LeaderboardTypeCost, LeaderboardTypeRecharge, LeaderboardTypeTokens,
+		LeaderboardTypeRequests, LeaderboardTypeActiveDays:
+		return true
+	default:
+		return false
+	}
+}
+
+// LeaderboardPeriod represents the time period for leaderboard ranking.
+type LeaderboardPeriod string
+
+const (
+	LeaderboardPeriodToday LeaderboardPeriod = "today"
+	LeaderboardPeriodWeek  LeaderboardPeriod = "week"
+	LeaderboardPeriodMonth LeaderboardPeriod = "month"
+	LeaderboardPeriodAll   LeaderboardPeriod = "all"
+)
+
+// IsValid checks whether the leaderboard period is valid.
+func (p LeaderboardPeriod) IsValid() bool {
+	switch p {
+	case LeaderboardPeriodToday, LeaderboardPeriodWeek, LeaderboardPeriodMonth, LeaderboardPeriodAll:
+		return true
+	default:
+		return false
+	}
+}
+
+// LeaderboardEntry represents a single row in the leaderboard.
+type LeaderboardEntry struct {
+	Rank        int     `json:"rank"`
+	UserID      int64   `json:"user_id"`
+	MaskedEmail string  `json:"masked_email"`
+	Value       float64 `json:"value"`           // primary ranking value (cost/tokens/requests/days/recharge amount)
+	Requests    int64   `json:"requests"`        // supplementary: total requests in period
+	Tokens      int64   `json:"tokens"`          // supplementary: total tokens in period
+	Title       string  `json:"title,omitempty"` // title/badge for top rankers
+}
+
+// LeaderboardMyRank represents the current user's own ranking info.
+type LeaderboardMyRank struct {
+	Rank          int     `json:"rank"`
+	Value         float64 `json:"value"`
+	Requests      int64   `json:"requests"`
+	Tokens        int64   `json:"tokens"`
+	NextRankGap   float64 `json:"next_rank_gap,omitempty"`   // gap to the next higher rank
+	NextRankEmail string  `json:"next_rank_email,omitempty"` // masked email of the next higher rank user
+}
+
+// LeaderboardResponse represents the full leaderboard API response.
+type LeaderboardResponse struct {
+	Type   LeaderboardType    `json:"type"`
+	Period LeaderboardPeriod  `json:"period"`
+	Items  []LeaderboardEntry `json:"items"`
+	MyRank *LeaderboardMyRank `json:"my_rank,omitempty"`
+}

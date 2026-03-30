@@ -66,6 +66,8 @@ func RegisterUserRoutes(
 			usage.GET("/dashboard/trend", h.Usage.DashboardTrend)
 			usage.GET("/dashboard/models", h.Usage.DashboardModels)
 			usage.POST("/dashboard/api-keys-usage", h.Usage.DashboardAPIKeysUsage)
+			// Leaderboard
+			usage.GET("/leaderboard", h.Usage.Leaderboard)
 		}
 
 		// 公告（用户可见）

@@ -352,7 +352,8 @@ export default {
     mySubscriptions: 'My Subscriptions',
     buySubscription: 'Recharge / Subscription',
     docs: 'Docs',
-    sora: 'Sora Studio'
+    sora: 'Sora Studio',
+    leaderboard: 'Leaderboard'
   },
 
   // Auth
@@ -770,6 +771,35 @@ export default {
     exportExcelFailed: 'Failed to export usage data',
     imageUnit: ' images',
     userAgent: 'User-Agent'
+  },
+
+  // Leaderboard
+  leaderboard: {
+    title: 'Leaderboard',
+    description: 'See who tops the charts',
+    typeCost: 'Cost',
+    typeRecharge: 'Recharge',
+    typeTokens: 'Tokens',
+    typeRequests: 'Requests',
+    typeActiveDays: 'Active Days',
+    periodToday: 'Today',
+    periodWeek: 'This Week',
+    periodMonth: 'This Month',
+    periodAll: 'All Time',
+    myRank: 'My Rank',
+    notRanked: 'Not ranked yet, keep going!',
+    gap: '{action} {amount} more to surpass #{rank}',
+    gapCost: 'Spend',
+    gapRecharge: 'Top up',
+    gapTokens: 'Use',
+    gapRequests: 'Make',
+    gapActiveDays: 'Be active',
+    totalParticipants: '{count} participants',
+    noData: 'No data yet',
+    loading: 'Loading...',
+    rank: 'Rank',
+    value: 'Value',
+    surpass: 'surpass'
   },
 
   // Redeem
