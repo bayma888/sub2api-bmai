@@ -44,7 +44,22 @@ checksum:
   algorithm: sha256
 
 changelog:
-  disable: true
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^chore\(deps\):'
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: "🚀 新功能"
+      regexp: '^feat'
+      order: 0
+    - title: "🐛 修复"
+      regexp: '^fix'
+      order: 1
+    - title: "🔧 其他"
+      order: 999
 
 release:
   draft: false
@@ -52,6 +67,8 @@ release:
   name_template: "BMAI Sub2API {{.Version}}"
   header: |
     > BMAI Sub2API - 私有 Fork 版本（含排行榜等自定义功能）
+    >
+    > 基于上游 [Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
 
   footer: |
     ---
