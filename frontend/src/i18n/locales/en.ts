@@ -789,6 +789,10 @@ export default {
     myRank: 'My Rank',
     notRanked: 'Not ranked yet, keep going!',
     gap: '{action} {amount} more to surpass #{rank}',
+    gapNext: '{action} {amount} more to surpass #{rank} {email}',
+    gapTop3: '{action} {amount} more to reach Top 3!',
+    gapInBoard: 'You are #{rank} on {board}, {action} {amount} to surpass',
+    leading: 'You lead #2 by {amount}, keep it up!',
     gapCost: 'Spend',
     gapRecharge: 'Top up',
     gapTokens: 'Use',
@@ -799,7 +803,18 @@ export default {
     loading: 'Loading...',
     rank: 'Rank',
     value: 'Value',
-    surpass: 'surpass'
+    surpass: 'surpass',
+    days: 'd',
+    tier: {
+      champion: 'Champion',
+      diamond: 'Diamond',
+      platinum: 'Platinum',
+      gold: 'Gold',
+      silver: 'Silver',
+      bronze: 'Bronze',
+    },
+    tierMax: 'Top tier reached!',
+    tierGap: 'Surpass {count} more to reach {tier}',
   },
 
   // Redeem

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
@@ -369,13 +370,48 @@ var leaderboardTitles = map[usagestats.LeaderboardType]string{
 	usagestats.LeaderboardTypeActiveDays: "\U0001f4aa 勤劳之星",
 }
 
+// ======================== Leaderboard Cache ========================
+// 进程内缓存，排行榜数据5分钟更新一次，避免每次请求都查数据库
+// 注意：这里只缓存不含 my_rank 的榜单数据（因为 my_rank 是用户维度的）
+
+const leaderboardCacheTTL = 30 * time.Minute
+
+type leaderboardCacheEntry struct {
+	items     []usagestats.LeaderboardEntry
+	fetchedAt time.Time
+}
+
+var (
+	leaderboardCache   sync.Map // key: "type:period" → *leaderboardCacheEntry
+)
+
 // GetLeaderboard returns the leaderboard for the given type and time period.
 func (s *UsageService) GetLeaderboard(ctx context.Context, lbType usagestats.LeaderboardType, period usagestats.LeaderboardPeriod, userID int64, limit int) (*usagestats.LeaderboardResponse, error) {
 	startTime, endTime := leaderboardPeriodToTimeRange(period)
 
-	items, err := s.usageRepo.GetLeaderboard(ctx, lbType, startTime, endTime, limit)
-	if err != nil {
-		return nil, fmt.Errorf("get leaderboard: %w", err)
+	// 检查缓存：排行榜数据每5分钟刷新一次
+	cacheKey := fmt.Sprintf("lb:%s:%s", lbType, period)
+	var items []usagestats.LeaderboardEntry
+
+	if cached, ok := leaderboardCache.Load(cacheKey); ok {
+		entry := cached.(*leaderboardCacheEntry)
+		if time.Since(entry.fetchedAt) < leaderboardCacheTTL {
+			items = entry.items
+		}
+	}
+
+	// 缓存未命中或已过期，查数据库
+	if items == nil {
+		var err error
+		items, err = s.usageRepo.GetLeaderboard(ctx, lbType, startTime, endTime, limit)
+		if err != nil {
+			return nil, fmt.Errorf("get leaderboard: %w", err)
+		}
+		// 写入缓存
+		leaderboardCache.Store(cacheKey, &leaderboardCacheEntry{
+			items:     items,
+			fetchedAt: time.Now(),
+		})
 	}
 
 	// Assign titles
