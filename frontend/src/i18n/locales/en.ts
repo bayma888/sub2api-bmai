@@ -815,6 +815,9 @@ export default {
     },
     tierMax: 'Top tier reached!',
     tierGap: 'Surpass {count} more to reach {tier}',
+    ctaTitle: 'Where do you rank?',
+    ctaDesc: 'Log in to see your rank and join the competition',
+    ctaButton: 'Join Now',
   },
 
   // Redeem

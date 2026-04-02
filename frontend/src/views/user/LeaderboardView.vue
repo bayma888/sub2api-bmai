@@ -156,7 +156,7 @@
         </div>
       </div>
 
-      <!-- Bottom Motivation Bar (only when logged in) -->
+      <!-- Bottom Motivation Bar (logged in) -->
       <div
         v-if="isLoggedIn && bestGapText && !loadingAll"
         class="card sticky bottom-4 z-10 px-6 py-5"
@@ -164,6 +164,28 @@
         <div class="flex items-center gap-3">
           <span class="text-xl">💡</span>
           <span class="text-base font-semibold text-amber-600 dark:text-amber-400">{{ bestGapText }}</span>
+        </div>
+      </div>
+
+      <!-- Bottom CTA Bar (not logged in) -->
+      <div
+        v-if="!isLoggedIn && !loadingAll"
+        class="card sticky bottom-4 z-10 px-6 py-5"
+      >
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">🔥</span>
+            <div>
+              <p class="text-base font-bold text-gray-900 dark:text-white">{{ t('leaderboard.ctaTitle') }}</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('leaderboard.ctaDesc') }}</p>
+            </div>
+          </div>
+          <button
+            @click="$router.push('/login?redirect=/leaderboard')"
+            class="flex-shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:shadow-xl hover:brightness-110"
+          >
+            🏆 {{ t('leaderboard.ctaButton') }}
+          </button>
         </div>
       </div>
     </div>
