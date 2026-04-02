@@ -820,9 +820,9 @@ export default {
     },
     tierMax: '已到最高段位！',
     tierGap: '再超越 {count} 人升 {tier}',
-    ctaTitle: '看看你能排第几？',
-    ctaDesc: '登录查看我的排名，充值参与排名竞争',
-    ctaButton: '立即参与',
+    ctaTitle: '想上榜？去充值提升排名！',
+    ctaDesc: '看看你能排第几，和大佬们一较高下',
+    ctaButton: '立即充值',
   },
 
   // Redeem

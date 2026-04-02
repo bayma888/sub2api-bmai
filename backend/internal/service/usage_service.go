@@ -374,7 +374,7 @@ var leaderboardTitles = map[usagestats.LeaderboardType]string{
 // 进程内缓存，排行榜数据5分钟更新一次，避免每次请求都查数据库
 // 注意：这里只缓存不含 my_rank 的榜单数据（因为 my_rank 是用户维度的）
 
-const leaderboardCacheTTL = 30 * time.Minute
+const leaderboardCacheTTL = 10 * time.Minute
 
 type leaderboardCacheEntry struct {
 	items     []usagestats.LeaderboardEntry

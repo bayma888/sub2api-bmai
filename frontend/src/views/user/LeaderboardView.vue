@@ -23,7 +23,7 @@
             @click="currentPeriod = p.value; fetchAllBoards()"
             class="rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200"
             :class="currentPeriod === p.value
-              ? 'bg-white text-gray-900 shadow-sm dark:bg-dark-600 dark:text-white'
+              ? 'bg-primary-500 text-white shadow-sm dark:bg-primary-600'
               : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
           >
             {{ p.label }}
@@ -156,7 +156,7 @@
         </div>
       </div>
 
-      <!-- Bottom Motivation Bar (logged in) -->
+      <!-- Bottom Motivation Bar (logged in, show gap text) -->
       <div
         v-if="isLoggedIn && bestGapText && !loadingAll"
         class="card sticky bottom-4 z-10 px-6 py-5"
@@ -167,7 +167,7 @@
         </div>
       </div>
 
-      <!-- Bottom CTA Bar (not logged in) -->
+      <!-- Bottom CTA Bar (not logged in, guide to main site) -->
       <div
         v-if="!isLoggedIn && !loadingAll"
         class="card sticky bottom-4 z-10 px-6 py-5"
@@ -180,12 +180,13 @@
               <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('leaderboard.ctaDesc') }}</p>
             </div>
           </div>
-          <button
-            @click="$router.push('/login?redirect=/leaderboard')"
-            class="flex-shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:shadow-xl hover:brightness-110"
+          <a
+            :href="mainSiteLoginUrl"
+            target="_top"
+            class="flex-shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:shadow-xl hover:brightness-110 no-underline"
           >
             🏆 {{ t('leaderboard.ctaButton') }}
-          </button>
+          </a>
         </div>
       </div>
     </div>
@@ -203,6 +204,15 @@ import type { LeaderboardType, LeaderboardPeriod, LeaderboardResponse } from '@/
 const { t } = useI18n()
 const authStore = useAuthStore()
 const isLoggedIn = computed(() => authStore.isAuthenticated)
+
+// 主站登录地址：从 URL 参数 src_host 获取（主站 iframe 会传）
+// target="_top" 让整个页面跳转（跳出 iframe）
+const mainSiteLoginUrl = computed(() => {
+  const params = new URLSearchParams(window.location.search)
+  const host = params.get('src_host')
+  if (host) return `${host}/login`
+  return '/login'
+})
 
 // ======================== Types ========================
 
@@ -469,7 +479,7 @@ function rankBorderClass(rank: number): string {
 
 // ======================== Frontend Cache ========================
 // 前端缓存已查过的结果，3分钟内不重复请求后端
-const FRONTEND_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
+const FRONTEND_CACHE_TTL = 10 * 60 * 1000 // 10 minutes
 const frontendCache = new Map<string, { data: LeaderboardResponse; time: number }>()
 
 async function fetchAllBoards() {
@@ -528,13 +538,18 @@ const SIMULATED_EMAILS = [
 const SIMULATED_TITLES = ['', '', '', '活跃用户', '', '资深玩家', '', '', '老用户', '']
 
 // 为每个榜单类型定义合理的模拟数值范围（要像真实活跃用户）
-function getSimulatedValueRange(type: LeaderboardType): { base: number; variance: number } {
+// 不同时段量级不同：今日 < 本周 < 本月 < 全部
+function getSimulatedValueRange(type: LeaderboardType, period: string): { base: number; variance: number } {
+  // 时段倍率：今日1x，本周3x，本月8x，全部20x
+  const periodMultiplier: Record<string, number> = { today: 1, week: 3, month: 8, all: 20 }
+  const mult = periodMultiplier[period] || 1
+
   switch (type) {
-    case 'cost':     return { base: 120, variance: 800 }    // $120 ~ $920
-    case 'recharge': return { base: 200, variance: 1500 }   // $200 ~ $1700
-    case 'tokens':   return { base: 80000, variance: 500000 }  // 80K ~ 580K tokens
-    case 'active_days': return { base: 5, variance: 22 }    // 5 ~ 27 天
-    default:         return { base: 100, variance: 500 }
+    case 'cost':        return { base: 15 * mult, variance: 80 * mult }
+    case 'recharge':    return { base: 25 * mult, variance: 120 * mult }
+    case 'tokens':      return { base: 8000 * mult, variance: 50000 * mult }
+    case 'active_days': return { base: Math.min(1 * mult, 28), variance: Math.min(3 * mult, 28) }
+    default:            return { base: 10 * mult, variance: 50 * mult }
   }
 }
 
@@ -553,10 +568,11 @@ function padWithSimulatedUsers(data: LeaderboardResponse, type: LeaderboardType)
   // 获取真实用户的最高值作为参考
   const maxRealValue = realCount > 0 ? data.items[0].value : 0
 
-  // 生成 seed: 基于 type + period 保证数据稳定
-  const seedBase = type.charCodeAt(0) * 1000 + data.period.charCodeAt(0)
+  // 生成 seed: 基于 type + period 保证数据稳定，不同 period 差异要大
+  const periodSeedMap: Record<string, number> = { today: 1, week: 2, month: 3, all: 4 }
+  const seedBase = type.charCodeAt(0) * 10000 + (periodSeedMap[data.period] || 0) * 1000
 
-  const range = getSimulatedValueRange(type)
+  const range = getSimulatedValueRange(type, data.period)
   const simulated: typeof data.items = []
   const usedEmails = new Set(data.items.map(i => i.masked_email))
 
@@ -642,7 +658,25 @@ function padWithSimulatedUsers(data: LeaderboardResponse, type: LeaderboardType)
 
 // ======================== Lifecycle ========================
 
-onMounted(() => {
+onMounted(async () => {
+  // 从 URL 参数读取主站透传的 token（外链/iframe 场景）
+  // 主站 CustomPageView 会自动拼 ?token=xxx&user_id=xxx 到 URL
+  const params = new URLSearchParams(window.location.search)
+  const urlToken = params.get('token')
+
+  if (urlToken && !isLoggedIn.value) {
+    try {
+      await authStore.setToken(urlToken)
+      // 认证成功后，清掉 URL 里的 token（安全起见，不留在地址栏）
+      const cleanUrl = new URL(window.location.href)
+      cleanUrl.searchParams.delete('token')
+      cleanUrl.searchParams.delete('user_id')
+      window.history.replaceState({}, '', cleanUrl.toString())
+    } catch {
+      // token 无效或过期，忽略，当匿名用户处理
+    }
+  }
+
   fetchAllBoards()
 })
 </script>
