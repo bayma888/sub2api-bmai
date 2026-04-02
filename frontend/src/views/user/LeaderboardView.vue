@@ -1,5 +1,6 @@
 <template>
-  <AppLayout>
+  <!-- iframe 嵌入模式：不显示 AppLayout（侧边栏+顶栏），直接显示内容 -->
+  <component :is="isEmbedded ? 'div' : AppLayout">
     <div class="mx-auto space-y-5 px-4 py-6">
       <!-- Page Header -->
       <div class="flex items-center justify-between">
@@ -190,7 +191,7 @@
         </div>
       </div>
     </div>
-  </AppLayout>
+  </component>
 </template>
 
 <script setup lang="ts">
@@ -204,6 +205,9 @@ import type { LeaderboardType, LeaderboardPeriod, LeaderboardResponse } from '@/
 const { t } = useI18n()
 const authStore = useAuthStore()
 const isLoggedIn = computed(() => authStore.isAuthenticated)
+
+// 检测是否被 iframe 嵌入（主站传 ui_mode=embedded）
+const isEmbedded = new URLSearchParams(window.location.search).get('ui_mode') === 'embedded'
 
 // 主站登录地址：从 URL 参数 src_host 获取（主站 iframe 会传）
 // target="_top" 让整个页面跳转（跳出 iframe）
