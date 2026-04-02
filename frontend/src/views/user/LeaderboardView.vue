@@ -31,8 +31,8 @@
         </div>
       </div>
 
-      <!-- My Tier Card -->
-      <div v-if="bestRankData" class="card p-6">
+      <!-- My Tier Card (only when logged in) -->
+      <div v-if="isLoggedIn && bestRankData" class="card p-6">
         <div class="flex items-center gap-6">
           <!-- Tier icon -->
           <div class="flex flex-col items-center gap-1.5">
@@ -132,8 +132,8 @@
             </div>
           </div>
 
-          <!-- My rank in this board + motivation text -->
-          <div v-if="getMyRankInfo(board.type)" class="border-t border-gray-100 bg-gray-50/50 px-5 py-4 dark:border-dark-700 dark:bg-dark-800/80">
+          <!-- My rank in this board + motivation text (only when logged in) -->
+          <div v-if="isLoggedIn && getMyRankInfo(board.type)" class="border-t border-gray-100 bg-gray-50/50 px-5 py-4 dark:border-dark-700 dark:bg-dark-800/80">
             <!-- My rank row -->
             <div class="flex items-center gap-2">
               <span class="text-sm text-gray-500 dark:text-gray-400">📍 {{ t('leaderboard.myRank') }}</span>
@@ -156,9 +156,9 @@
         </div>
       </div>
 
-      <!-- Bottom Motivation Bar -->
+      <!-- Bottom Motivation Bar (only when logged in) -->
       <div
-        v-if="bestGapText && !loadingAll"
+        v-if="isLoggedIn && bestGapText && !loadingAll"
         class="card sticky bottom-4 z-10 px-6 py-5"
       >
         <div class="flex items-center gap-3">
@@ -174,10 +174,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { AppLayout } from '@/components/layout'
+import { useAuthStore } from '@/stores/auth'
 import { usageAPI } from '@/api/usage'
 import type { LeaderboardType, LeaderboardPeriod, LeaderboardResponse } from '@/api/usage'
 
 const { t } = useI18n()
+const authStore = useAuthStore()
+const isLoggedIn = computed(() => authStore.isAuthenticated)
 
 // ======================== Types ========================
 
@@ -465,10 +468,11 @@ async function fetchAllBoards() {
       }
     }
 
-    // 并发请求未缓存的榜单
+    // 并发请求未缓存的榜单（登录用带token的API，未登录用公开API）
     if (toFetch.length > 0) {
+      const apiFn = isLoggedIn.value ? usageAPI.getLeaderboard : usageAPI.getLeaderboardPublic
       const fetched = await Promise.all(
-        toFetch.map(f => usageAPI.getLeaderboard(f.board.type, currentPeriod.value, 20))
+        toFetch.map(f => apiFn(f.board.type, currentPeriod.value, 20))
       )
       toFetch.forEach((f, j) => {
         results[f.idx] = fetched[j]

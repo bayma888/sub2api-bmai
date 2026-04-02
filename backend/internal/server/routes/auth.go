@@ -78,6 +78,12 @@ func RegisterAuthRoutes(
 		settings.GET("/public", h.Setting.GetPublicSettings)
 	}
 
+	// 公开排行榜（无需认证，不返回 my_rank）
+	publicGroup := v1.Group("/public")
+	{
+		publicGroup.GET("/leaderboard", h.Usage.LeaderboardPublic)
+	}
+
 	// 需要认证的当前用户信息
 	authenticated := v1.Group("")
 	authenticated.Use(gin.HandlerFunc(jwtAuth))

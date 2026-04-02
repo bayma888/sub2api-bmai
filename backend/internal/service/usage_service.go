@@ -431,13 +431,15 @@ func (s *UsageService) GetLeaderboard(ctx context.Context, lbType usagestats.Lea
 		Items:  items,
 	}
 
-	// Get current user's rank
-	myRank, err := s.usageRepo.GetUserLeaderboardRank(ctx, userID, lbType, startTime, endTime)
-	if err != nil {
-		// Non-fatal: log and continue without my_rank
-		fmt.Printf("warn: failed to get user %d leaderboard rank: %v\n", userID, err)
+	// Get current user's rank (skip for anonymous/public access)
+	if userID > 0 {
+		myRank, err := s.usageRepo.GetUserLeaderboardRank(ctx, userID, lbType, startTime, endTime)
+		if err != nil {
+			// Non-fatal: log and continue without my_rank
+			fmt.Printf("warn: failed to get user %d leaderboard rank: %v\n", userID, err)
+		}
+		resp.MyRank = myRank
 	}
-	resp.MyRank = myRank
 
 	return resp, nil
 }

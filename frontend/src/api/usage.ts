@@ -305,6 +305,20 @@ export async function getLeaderboard(
   return data
 }
 
+/**
+ * Get public leaderboard (no auth required, no my_rank)
+ */
+export async function getLeaderboardPublic(
+  type: LeaderboardType = 'cost',
+  period: LeaderboardPeriod = 'today',
+  limit: number = 20
+): Promise<LeaderboardResponse> {
+  const { data } = await apiClient.get<LeaderboardResponse>('/public/leaderboard', {
+    params: { type, period, limit }
+  })
+  return data
+}
+
 export const usageAPI = {
   list,
   query,
@@ -318,7 +332,8 @@ export const usageAPI = {
   getDashboardModels,
   getDashboardApiKeysUsage,
   // Leaderboard
-  getLeaderboard
+  getLeaderboard,
+  getLeaderboardPublic
 }
 
 export default usageAPI

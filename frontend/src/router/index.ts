@@ -158,8 +158,7 @@ const routes: RouteRecordRaw[] = [
     name: 'Leaderboard',
     component: () => import('@/views/user/LeaderboardView.vue'),
     meta: {
-      requiresAuth: true,
-      requiresAdmin: false,
+      requiresAuth: false,
       title: 'Leaderboard',
       titleKey: 'leaderboard.title',
       descriptionKey: 'leaderboard.description'

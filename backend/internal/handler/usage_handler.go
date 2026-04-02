@@ -451,3 +451,39 @@ func (h *UsageHandler) Leaderboard(c *gin.Context) {
 
 	response.Success(c, result)
 }
+
+// LeaderboardPublic returns the leaderboard without requiring authentication.
+// No my_rank is returned (userID=0 means anonymous).
+// GET /api/v1/public/leaderboard?type=cost&period=today&limit=20
+func (h *UsageHandler) LeaderboardPublic(c *gin.Context) {
+	lbType := usagestats.LeaderboardType(c.DefaultQuery("type", "cost"))
+	if !lbType.IsValid() {
+		response.BadRequest(c, "Invalid leaderboard type. Allowed: cost, recharge, tokens, requests, active_days")
+		return
+	}
+
+	period := usagestats.LeaderboardPeriod(c.DefaultQuery("period", "today"))
+	if !period.IsValid() {
+		response.BadRequest(c, "Invalid period. Allowed: today, week, month, all")
+		return
+	}
+
+	limit := 20
+	if limitStr := c.Query("limit"); limitStr != "" {
+		parsed, err := strconv.Atoi(limitStr)
+		if err != nil || parsed < 1 || parsed > 100 {
+			response.BadRequest(c, "Invalid limit (1-100)")
+			return
+		}
+		limit = parsed
+	}
+
+	// userID=0: anonymous, no my_rank will be returned
+	result, err := h.usageService.GetLeaderboard(c.Request.Context(), lbType, period, 0, limit)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	response.Success(c, result)
+}
