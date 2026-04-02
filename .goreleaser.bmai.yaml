@@ -66,9 +66,7 @@ release:
   prerelease: auto
   name_template: "BMAI Sub2API {{.Version}}"
   header: |
-    > BMAI Sub2API - 私有 Fork 版本（含排行榜等自定义功能）
-    >
-    > 基于上游 [Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api)
+    > BMAI Sub2API - 私有定制版（含排行榜、段位系统等特色功能）
 
   footer: |
     ---
