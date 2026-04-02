@@ -306,11 +306,17 @@ function getTier(rank: number, total: number): Tier {
 
 ## 实施计划
 
-- [ ] 重写 `LeaderboardView.vue`，用方案E布局替换原领奖台
-- [ ] 新增段位计算工具函数 `utils/tier.ts`
-- [ ] 顶部"我的段位"大卡片（渐变背景 + 段位图标 + 进度条）
-- [ ] 4榜并排卡片组件（每榜Top5 + 段位图标）
-- [ ] 注释掉请求榜（代码保留，UI隐藏）
-- [ ] 底部刺激文案（"再消费¥xxx超越xxx"）
-- [ ] 更新 i18n 翻译
-- [ ] 视觉验收
+- [x] 重写 `LeaderboardView.vue`，用方案E布局替换原领奖台
+- [x] 段位计算逻辑（内置在 LeaderboardView.vue 中）
+- [x] 顶部"我的段位"大卡片（段位图标 + 进度条）
+- [x] 4榜并排卡片（每榜Top6 + 段位图标），响应式 1/2/4列
+- [x] 注释掉请求榜（代码保留，UI隐藏）
+- [x] 底部刺激文案（"再消费$xx超越xxx" + "冲进前三"）
+- [x] 模拟数据：真实用户<10人时自动补假用户
+- [x] 双层缓存：后端10分钟进程内 + 前端10分钟内存
+- [x] 公开API：`GET /api/v1/public/leaderboard`（无需token）
+- [x] Token透传：主站iframe传token → 自动认证
+- [x] CTA底栏：未登录→"立即充值"跳主站；已登录→刺激文案
+- [x] 更新 i18n 翻译（段位 + CTA 文案）
+- [x] 部署到生产环境 `lb.kun8.vip`（SSL + nginx + iframe嵌入）
+- [x] 部署tag: `bmai-v0.1.106.3`
