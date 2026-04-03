@@ -260,7 +260,7 @@ export async function getDashboardApiKeysUsage(
 // ==================== Leaderboard Types ====================
 
 export type LeaderboardType = 'cost' | 'recharge' | 'tokens' | 'requests' | 'active_days'
-export type LeaderboardPeriod = 'today' | 'week' | 'month' | 'all'
+export type LeaderboardPeriod = 'last24h' | 'today' | 'yesterday' | 'last7d' | 'month' | 'last30d' | 'last_month'
 
 export interface LeaderboardEntry {
   rank: number
@@ -296,7 +296,7 @@ export interface LeaderboardResponse {
  */
 export async function getLeaderboard(
   type: LeaderboardType = 'cost',
-  period: LeaderboardPeriod = 'today',
+  period: LeaderboardPeriod = 'last24h',
   limit: number = 20
 ): Promise<LeaderboardResponse> {
   const { data } = await apiClient.get<LeaderboardResponse>('/usage/leaderboard', {
@@ -310,7 +310,7 @@ export async function getLeaderboard(
  */
 export async function getLeaderboardPublic(
   type: LeaderboardType = 'cost',
-  period: LeaderboardPeriod = 'today',
+  period: LeaderboardPeriod = 'last24h',
   limit: number = 20
 ): Promise<LeaderboardResponse> {
   const { data } = await apiClient.get<LeaderboardResponse>('/public/leaderboard', {

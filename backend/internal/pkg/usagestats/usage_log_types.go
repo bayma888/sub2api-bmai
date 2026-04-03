@@ -349,16 +349,21 @@ func (t LeaderboardType) IsValid() bool {
 type LeaderboardPeriod string
 
 const (
-	LeaderboardPeriodToday LeaderboardPeriod = "today"
-	LeaderboardPeriodWeek  LeaderboardPeriod = "week"
-	LeaderboardPeriodMonth LeaderboardPeriod = "month"
-	LeaderboardPeriodAll   LeaderboardPeriod = "all"
+	LeaderboardPeriodLast24h   LeaderboardPeriod = "last24h"
+	LeaderboardPeriodToday     LeaderboardPeriod = "today"
+	LeaderboardPeriodYesterday LeaderboardPeriod = "yesterday"
+	LeaderboardPeriodLast7d    LeaderboardPeriod = "last7d"
+	LeaderboardPeriodMonth     LeaderboardPeriod = "month"
+	LeaderboardPeriodLast30d   LeaderboardPeriod = "last30d"
+	LeaderboardPeriodLastMonth LeaderboardPeriod = "last_month"
 )
 
 // IsValid checks whether the leaderboard period is valid.
 func (p LeaderboardPeriod) IsValid() bool {
 	switch p {
-	case LeaderboardPeriodToday, LeaderboardPeriodWeek, LeaderboardPeriodMonth, LeaderboardPeriodAll:
+	case LeaderboardPeriodLast24h, LeaderboardPeriodToday, LeaderboardPeriodYesterday,
+		LeaderboardPeriodLast7d, LeaderboardPeriodMonth, LeaderboardPeriodLast30d,
+		LeaderboardPeriodLastMonth:
 		return true
 	default:
 		return false

@@ -74,16 +74,21 @@
         </div>
       </div>
 
-      <!-- Loading State -->
-      <div v-if="loadingAll" class="flex h-64 items-center justify-center">
+      <!-- Loading State (only first load, not when switching periods) -->
+      <div v-if="loadingAll && !hasData" class="flex h-64 items-center justify-center">
         <div class="flex flex-col items-center gap-3">
           <div class="h-8 w-8 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"></div>
           <span class="text-sm text-gray-400">{{ t('leaderboard.loading') }}</span>
         </div>
       </div>
 
-      <!-- 4 Board Cards Grid -->
-      <div v-else class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <!-- 4 Board Cards Grid (always visible once data loaded, with subtle refresh indicator) -->
+      <div v-if="hasData || !loadingAll" class="relative">
+        <!-- Subtle refresh indicator (top-right spinner when switching periods) -->
+        <div v-if="loadingAll && hasData" class="absolute -top-2 right-0 z-10">
+          <div class="h-5 w-5 animate-spin rounded-full border-2 border-primary-400 border-t-transparent"></div>
+        </div>
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4" :class="{ 'opacity-60 transition-opacity': loadingAll && hasData }">
         <div
           v-for="(board, boardIdx) in visibleBoards"
           :key="board.type"
@@ -121,7 +126,14 @@
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-1.5">
                   <span class="text-sm">{{ getTierIcon(entry.rank, getBoardTotal(board.type)) }}</span>
-                  <span class="truncate text-sm font-medium text-gray-800 dark:text-gray-200">{{ entry.masked_email }}</span>
+                  <!-- Admin: clickable email to view user info -->
+                  <button
+                    v-if="isAdmin"
+                    @click="showUserInfo(entry.user_id)"
+                    class="truncate text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline dark:text-primary-400 dark:hover:text-primary-300"
+                  >{{ entry.masked_email }}</button>
+                  <!-- Non-admin: plain text -->
+                  <span v-else class="truncate text-sm font-medium text-gray-800 dark:text-gray-200">{{ entry.masked_email }}</span>
                 </div>
                 <div v-if="entry.title" class="mt-0.5 text-xs text-gray-400">{{ entry.title }}</div>
               </div>
@@ -154,6 +166,7 @@
               👑 {{ t('leaderboard.leading', { amount: formatValue(getMyRankInfo(board.type)!.value - getBoardItems(board.type)[1].value, board.type) }) }}
             </div>
           </div>
+        </div>
         </div>
       </div>
 
@@ -191,6 +204,15 @@
         </div>
       </div>
     </div>
+
+    <!-- Admin: User Balance History Modal -->
+    <UserBalanceHistoryModal
+      v-if="isAdmin"
+      :show="showBalanceModal"
+      :user="selectedUser"
+      :hide-actions="true"
+      @close="showBalanceModal = false; selectedUser = null"
+    />
   </component>
 </template>
 
@@ -201,10 +223,28 @@ import { AppLayout } from '@/components/layout'
 import { useAuthStore } from '@/stores/auth'
 import { usageAPI } from '@/api/usage'
 import type { LeaderboardType, LeaderboardPeriod, LeaderboardResponse } from '@/api/usage'
+import { adminAPI } from '@/api/admin'
+import UserBalanceHistoryModal from '@/components/admin/user/UserBalanceHistoryModal.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
 const isLoggedIn = computed(() => authStore.isAuthenticated)
+const isAdmin = computed(() => authStore.isAdmin)
+
+// Admin: user info modal
+const selectedUser = ref<any>(null)
+const showBalanceModal = ref(false)
+
+async function showUserInfo(userId: number) {
+  if (!isAdmin.value || userId <= 0) return
+  try {
+    const user = await adminAPI.users.getById(userId)
+    selectedUser.value = user
+    showBalanceModal.value = true
+  } catch (e) {
+    console.error('Failed to load user info:', e)
+  }
+}
 
 // 检测是否被 iframe 嵌入（主站传 ui_mode=embedded）
 const isEmbedded = new URLSearchParams(window.location.search).get('ui_mode') === 'embedded'
@@ -235,9 +275,12 @@ interface BoardConfig {
 
 // ======================== State ========================
 
-const currentPeriod = ref<LeaderboardPeriod>('today')
+const currentPeriod = ref<LeaderboardPeriod>('last24h' as LeaderboardPeriod)
 const boardDataMap = ref<Record<string, LeaderboardResponse | null>>({})
 const loadingAll = ref(false)
+
+// 是否已经加载过数据（用于区分首次加载 vs 切换时段刷新）
+const hasData = computed(() => Object.keys(boardDataMap.value).length > 0)
 
 // ======================== Config ========================
 
@@ -258,10 +301,12 @@ const visibleBoards = computed<BoardConfig[]>(() =>
 )
 
 const periods = computed(() => [
+  { value: 'last24h' as LeaderboardPeriod, label: t('leaderboard.periodLast24h') },
   { value: 'today' as LeaderboardPeriod, label: t('leaderboard.periodToday') },
-  { value: 'week' as LeaderboardPeriod, label: t('leaderboard.periodWeek') },
+  { value: 'yesterday' as LeaderboardPeriod, label: t('leaderboard.periodYesterday') },
+  { value: 'last7d' as LeaderboardPeriod, label: t('leaderboard.periodLast7d') },
   { value: 'month' as LeaderboardPeriod, label: t('leaderboard.periodMonth') },
-  { value: 'all' as LeaderboardPeriod, label: t('leaderboard.periodAll') },
+  { value: 'last_month' as LeaderboardPeriod, label: t('leaderboard.periodLastMonth') },
 ])
 
 // ======================== Tier System ========================
@@ -544,8 +589,11 @@ const SIMULATED_TITLES = ['', '', '', '活跃用户', '', '资深玩家', '', ''
 // 为每个榜单类型定义合理的模拟数值范围（要像真实活跃用户）
 // 不同时段量级不同：今日 < 本周 < 本月 < 全部
 function getSimulatedValueRange(type: LeaderboardType, period: string): { base: number; variance: number } {
-  // 时段倍率：今日1x，本周3x，本月8x，全部20x
-  const periodMultiplier: Record<string, number> = { today: 1, week: 3, month: 8, all: 20 }
+  // 时段倍率：不同时间范围的消费量级不同
+  const periodMultiplier: Record<string, number> = {
+    last24h: 1, today: 1, yesterday: 1,
+    last7d: 4, month: 8, last30d: 8, last_month: 8,
+  }
   const mult = periodMultiplier[period] || 1
 
   switch (type) {
@@ -573,7 +621,9 @@ function padWithSimulatedUsers(data: LeaderboardResponse, type: LeaderboardType)
   const maxRealValue = realCount > 0 ? data.items[0].value : 0
 
   // 生成 seed: 基于 type + period 保证数据稳定，不同 period 差异要大
-  const periodSeedMap: Record<string, number> = { today: 1, week: 2, month: 3, all: 4 }
+  const periodSeedMap: Record<string, number> = {
+    last24h: 1, today: 2, yesterday: 3, last7d: 4, month: 5, last30d: 6, last_month: 7,
+  }
   const seedBase = type.charCodeAt(0) * 10000 + (periodSeedMap[data.period] || 0) * 1000
 
   const range = getSimulatedValueRange(type, data.period)

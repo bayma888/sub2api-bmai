@@ -429,7 +429,7 @@ func (h *UsageHandler) Leaderboard(c *gin.Context) {
 
 	period := usagestats.LeaderboardPeriod(c.DefaultQuery("period", "today"))
 	if !period.IsValid() {
-		response.BadRequest(c, "Invalid period. Allowed: today, week, month, all")
+		response.BadRequest(c, "Invalid period. Allowed: last24h, today, yesterday, last7d, month, last30d, last_month")
 		return
 	}
 
@@ -464,7 +464,7 @@ func (h *UsageHandler) LeaderboardPublic(c *gin.Context) {
 
 	period := usagestats.LeaderboardPeriod(c.DefaultQuery("period", "today"))
 	if !period.IsValid() {
-		response.BadRequest(c, "Invalid period. Allowed: today, week, month, all")
+		response.BadRequest(c, "Invalid period. Allowed: last24h, today, yesterday, last7d, month, last30d, last_month")
 		return
 	}
 

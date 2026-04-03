@@ -447,20 +447,28 @@ func (s *UsageService) GetLeaderboard(ctx context.Context, lbType usagestats.Lea
 // leaderboardPeriodToTimeRange converts a period string to start/end times.
 func leaderboardPeriodToTimeRange(period usagestats.LeaderboardPeriod) (time.Time, time.Time) {
 	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
 	switch period {
+	case usagestats.LeaderboardPeriodLast24h:
+		return now.Add(-24 * time.Hour), now
 	case usagestats.LeaderboardPeriodToday:
-		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-		return start, now
-	case usagestats.LeaderboardPeriodWeek:
-		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -6)
-		return start, now
+		return todayStart, now
+	case usagestats.LeaderboardPeriodYesterday:
+		return todayStart.AddDate(0, 0, -1), todayStart
+	case usagestats.LeaderboardPeriodLast7d:
+		return todayStart.AddDate(0, 0, -6), now
 	case usagestats.LeaderboardPeriodMonth:
-		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, -1, 0)
-		return start, now
-	case usagestats.LeaderboardPeriodAll:
-		return time.Time{}, time.Time{} // zero times = no filter
+		// 本月1号~现在
+		return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()), now
+	case usagestats.LeaderboardPeriodLast30d:
+		return todayStart.AddDate(0, 0, -29), now
+	case usagestats.LeaderboardPeriodLastMonth:
+		// 上月1号~本月1号
+		thisMonth1st := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		lastMonth1st := thisMonth1st.AddDate(0, -1, 0)
+		return lastMonth1st, thisMonth1st
 	default:
-		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-		return start, now
+		return todayStart, now
 	}
 }
